@@ -29,7 +29,7 @@ function checkValidAddr(addr) {
 
 function checkWhitelisted(sender, callback) {
   let wl = false;
-  let addr = 'No address registered! :no:';
+  let addr = 'No address registered! <a:no:894309088987586641>';
 
   const params = {
     TableName,
@@ -42,7 +42,7 @@ function checkWhitelisted(sender, callback) {
       Object.keys(data).length > 0 &&
       !!data['Item'] &&
       !!data['Item']['address'];
-    if (wl) addr = data['Item']['address'] + ' :yes';
+    if (wl) addr = data['Item']['address'] + ' <a:yes:894309076895412224>';
     if (err) console.error('Unable to check whitelist record, err' + err);
 
     console.log(addr, sender);
