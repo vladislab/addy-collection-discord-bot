@@ -19,10 +19,7 @@ const client = new Client({
 });
 
 function checkValidAddr(addr) {
-  console.log(addr, addr.length);
-
   if (addr[0] === '0' && addr[1] === 'x' && addr.length === 42) {
-    console.log('addr valid');
     return true;
   } else return false;
 }
@@ -44,8 +41,6 @@ function checkWhitelisted(sender, callback) {
       !!data['Item']['address'];
     if (wl) addr = data['Item']['address'] + ' <a:yes:894309076895412224>';
     if (err) console.error('Unable to check whitelist record, err' + err);
-
-    console.log(addr, sender);
     return callback(addr);
   });
 }
@@ -80,6 +75,11 @@ client.on('message', async (msg) => {
     return;
   }
 
+  if (process.env.LOCAL_INSTANCE) {
+    console.log(msg.content);
+    return;
+  }
+
   if (msg.content.startsWith('!check')) {
     const {
       author: { bot, system, username, discriminator },
@@ -88,6 +88,7 @@ client.on('message', async (msg) => {
       const sender = `${username}#${discriminator}`;
       checkWhitelisted(sender, (addr) => msg.reply(addr));
     }
+    return;
   }
 
   if (msg.content) {
