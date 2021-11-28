@@ -2,9 +2,6 @@
 require('dotenv').config();
 const AWS = require('aws-sdk');
 const { Client, Intents } = require('discord.js');
-const client = new Client({
-  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
-});
 
 // Create a Secrets Manager client
 const region = 'ca-central-1';
@@ -46,6 +43,10 @@ AWS.config.update({
 const docClient = new AWS.DynamoDB.DocumentClient();
 // Setup the parameters required to save to Dynamo
 const TableName = secret['AWS_TABLE_NAME'] || process.env.AWS_TABLE_NAME;
+
+const client = new Client({
+  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
+});
 
 function checkValidAddr(addr) {
   console.log(addr, addr.length);
@@ -141,4 +142,4 @@ client.on('message', async (msg) => {
 });
 
 // client.login logs the bot in and sets it up for use. You'll enter your token here.
-client.login(discord_token);
+// client.login(discord_token);
