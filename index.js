@@ -107,6 +107,10 @@ client.on('message', async (msg) => {
       };
       console.log(log);
       store(log, () => msg.reply(`<a:noted:913180241155981362>`));
+    } else {
+      msg.reply(
+        'That’s not a valid address, you rat <:shotty:893972495961559061>'
+      );
     }
   }
 });
