@@ -7,17 +7,64 @@ const client = new Client({
 });
 
 const discord_token = process.env.DISCORD_TOKEN;
+// Create a Secrets Manager client
+const region = 'ca-central-1';
+const secretName =
+  'arn:aws:secretsmanager:ca-central-1:976115811350:secret:chum-wl-discord-bot-SZIdgX';
+let secret = '';
+let decodedBinarySecret = '';
+const clientSM = new AWS.SecretsManager({
+  region: region,
+});
+
+// In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
+// See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+// We rethrow the exception by default.
+clientSM.getSecretValue({ SecretId: secretName }, function (err, data) {
+  if (err) {
+    if (err.code === 'DecryptionFailureException')
+      // Secrets Manager can't decrypt the protected secret text using the provided KMS key.
+      // Deal with the exception here, and/or rethrow at your discretion.
+      throw err;
+    else if (err.code === 'InternalServiceErrorException')
+      // An error occurred on the server side.
+      // Deal with the exception here, and/or rethrow at your discretion.
+      throw err;
+    else if (err.code === 'InvalidParameterException')
+      // You provided an invalid value for a parameter.
+      // Deal with the exception here, and/or rethrow at your discretion.
+      throw err;
+    else if (err.code === 'InvalidRequestException')
+      // You provided a parameter value that is not valid for the current state of the resource.
+      // Deal with the exception here, and/or rethrow at your discretion.
+      throw err;
+    else if (err.code === 'ResourceNotFoundException')
+      // We can't find the resource that you asked for.
+      // Deal with the exception here, and/or rethrow at your discretion.
+      throw err;
+  } else {
+    // Decrypts secret using the associated KMS CMK.
+    // Depending on whether the secret is a string or binary, one of these fields will be populated.
+    if ('SecretString' in data) {
+      secret = data.SecretString;
+    } else {
+      let buff = new Buffer(data.SecretBinary, 'base64');
+      decodedBinarySecret = buff.toString('ascii');
+    }
+  }
+});
 
 // Update our AWS Connection Details
 AWS.config.update({
-  region: process.env.AWS_DEFAULT_REGION,
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: secret['AWS_DEFAULT_REGION'] || process.env.AWS_DEFAULT_REGION,
+  accessKeyId: secret['AWS_ACCESS_KEY_ID'] || process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey:
+    secret['AWS_SECRET_ACCESS_KEY'] || process.env.AWS_SECRET_ACCESS_KEY,
 });
 // Create the service used to connect to DynamoDB
 const docClient = new AWS.DynamoDB.DocumentClient();
 // Setup the parameters required to save to Dynamo
-const TableName = process.env.AWS_TABLE_NAME;
+const TableName = secret['AWS_TABLE_NAME'] || process.env.AWS_TABLE_NAME;
 
 function checkValidAddr(addr) {
   console.log(addr, addr.length);
@@ -44,7 +91,7 @@ function checkWhitelisted(sender, callback) {
       !!data['Item'] &&
       !!data['Item']['address'];
     if (wl) addr = data['Item']['address'] + ' :yes';
-    console.error('Unable to check whitelist record, err' + err);
+    if (err) console.error('Unable to check whitelist record, err' + err);
 
     console.log(addr, sender);
     return callback(addr);
