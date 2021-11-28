@@ -6,7 +6,6 @@ const client = new Client({
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
 
-const discord_token = process.env.DISCORD_TOKEN;
 // Create a Secrets Manager client
 const region = 'ca-central-1';
 const secretName =
@@ -115,6 +114,7 @@ function store(whitelistObj, callback) {
   });
 }
 
+const discord_token = secret['DISCORD_TOKEN'] || process.env.DISCORD_TOKEN;
 // Register an event so that when the bot is ready, it will log a messsage to the terminal
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
