@@ -82,24 +82,27 @@ client.on('interactionCreate', async (interaction) => {
   if (!command) return;
   const embedWlTrue = new MessageEmbed()
     .setColor('GREEN')
-    .setDescription('Whitelisted! <a:yes:894309076895412224>');
+    .setTitle('Result:')
+    .setDescription('✅ Address Whitelisted!');
   const embedWlFalse = new MessageEmbed()
     .setColor('RED')
-    .setDescription('NOT whitelisted! <a:no:894309088987586641>');
+    .setTitle('Result:')
+    .setDescription('❌ Address NOT whitelisted!');
 
   const embedWlInvalid = new MessageEmbed()
     .setColor('YELLOW')
-    .setDescription('Not a valid Ethereum address!');
+    .setTitle('Result:')
+    .setDescription('⚠️ Not a valid Ethereum address!');
 
   try {
     function callback(interaction, addr) {
       verifyAddressWL(addr, (isWL) => {
         if (typeof isWL === 'undefined') {
-          interaction.reply('Not a valid Ethereum address!');
+          interaction.reply({ embeds: [embedWlInvalid] });
           return;
         }
-        if (isWL) interaction.reply('Whitelisted! <a:yes:894309076895412224>');
-        else interaction.reply('NOT whitelisted! <a:no:894309088987586641>');
+        if (isWL) interaction.reply({ embeds: [embedWlTrue] });
+        else interaction.reply({ embeds: [embedWlFalse] });
       });
     }
     await command.execute(interaction, callback);
