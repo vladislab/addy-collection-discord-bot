@@ -1,49 +1,21 @@
 // Import discord.js and create the client
 require('dotenv').config();
-const AWS = require('aws-sdk');
-const { Client, Intents } = require('discord.js');
+const { Client, Intents, Collection, MessageEmbed } = require('discord.js');
+const fs = require('fs');
+const { REST } = require('@discordjs/rest');
+const { Routes } = require('discord-api-types/v9');
+const {
+  checkWhitelisted,
+  verifyAddressWL,
+  checkValidAddr,
+} = require('./api/aws');
 
-// Update our AWS Connection Details
-AWS.config.update({
-  region: process.env.AWS_DEFAULT_REGION,
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-});
-// Create the service used to connect to DynamoDB
-const docClient = new AWS.DynamoDB.DocumentClient();
-// Setup the parameters required to save to Dynamo
-const TableName = process.env.AWS_TABLE_NAME;
+const discord_token = process.env.DISCORD_TOKEN;
+const GUILD_ID = process.env.GUILD_ID;
 
 const client = new Client({
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
-
-function checkValidAddr(addr) {
-  if (addr[0] === '0' && addr[1] === 'x' && addr.length === 42) {
-    return true;
-  } else return false;
-}
-
-function checkWhitelisted(sender, callback) {
-  let wl = false;
-  let addr = 'No address registered! <a:no:894309088987586641>';
-
-  const params = {
-    TableName,
-    Key: {
-      id: sender,
-    },
-  };
-  docClient.get(params, (err, data) => {
-    wl =
-      Object.keys(data).length > 0 &&
-      !!data['Item'] &&
-      !!data['Item']['address'];
-    if (wl) addr = data['Item']['address'] + ' <a:yes:894309076895412224>';
-    if (err) console.error('Unable to check whitelist record, err' + err);
-    return callback(addr);
-  });
-}
 
 function store(whitelistObj, callback) {
   const params = {
@@ -62,20 +34,92 @@ function store(whitelistObj, callback) {
   });
 }
 
-const discord_token = process.env.DISCORD_TOKEN;
+// Loading commands from the commands folder
+const commandFiles = fs
+  .readdirSync('./commands')
+  .filter((file) => file.endsWith('.js'));
+const commands = [];
+
+// Creating a collection for commands in client
+client.commands = new Collection();
+
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  commands.push(command.data.toJSON());
+  client.commands.set(command.data.name, command);
+}
+
 // Register an event so that when the bot is ready, it will log a messsage to the terminal
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
+// When the client is ready, this only runs once
+client.once('ready', () => {
+  console.log('Ready!');
+  // Registering the commands in the client
+  const CLIENT_ID = client.user.id;
+  const rest = new REST({
+    version: '9',
+  }).setToken(discord_token);
+  async () => {
+    try {
+      await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
+        body: commands,
+      });
+      console.log(
+        'Successfully registered application commands for development guild'
+      );
+    } catch (error) {
+      if (error) console.error(error);
+    }
+  };
+});
+
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isCommand()) return;
+  const command = client.commands.get(interaction.commandName);
+  if (!command) return;
+  const embedWlTrue = new MessageEmbed()
+    .setColor('GREEN')
+    .setDescription('Whitelisted! <a:yes:894309076895412224>');
+  const embedWlFalse = new MessageEmbed()
+    .setColor('RED')
+    .setDescription('NOT whitelisted! <a:no:894309088987586641>');
+
+  const embedWlInvalid = new MessageEmbed()
+    .setColor('YELLOW')
+    .setDescription('Not a valid Ethereum address!');
+
+  try {
+    function callback(interaction, addr) {
+      verifyAddressWL(addr, (isWL) => {
+        if (typeof isWL === 'undefined') {
+          interaction.reply('Not a valid Ethereum address!');
+          return;
+        }
+        if (isWL) interaction.reply('Whitelisted! <a:yes:894309076895412224>');
+        else interaction.reply('NOT whitelisted! <a:no:894309088987586641>');
+      });
+    }
+    await command.execute(interaction, callback);
+  } catch (error) {
+    if (error) console.error(error);
+    await interaction.reply({
+      content: 'There was an error while executing this command!',
+      ephemeral: true,
+    });
+  }
+});
+
 // Register an event to handle incoming messages
-client.on('message', async (msg) => {
+client.on('messageCreate', async (msg) => {
   // This block will prevent the bot from responding to itself and other bots
-  if (msg.author.bot) {
+  if (msg.author.bot || process.env.VERIFY_MODE === 'ON') {
     return;
   }
 
-  if (process.env.LOCAL_INSTANCE) {
+  if (process.env.WATCH_MODE === 'ON') {
     console.log(msg.content);
     return;
   }
