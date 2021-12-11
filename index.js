@@ -35,17 +35,19 @@ const client = new Client({
 
 const embedWlTrue = new MessageEmbed()
   .setColor('GREEN')
-  .setTitle('Result:')
-  .setDescription('✅  Address Whitelisted!');
+  .setTitle('✅')
+  .setDescription('  Address Whitelisted!');
 const embedWlFalse = new MessageEmbed()
   .setColor('RED')
-  .setTitle('Result:')
-  .setDescription('❌  Address NOT whitelisted!');
+  .setTitle('❌')
+  .setDescription(
+    ' Address NOT whitelisted! \nPlease try again using MM address (case sensitive).'
+  );
 
 const embedWlInvalid = new MessageEmbed()
   .setColor('YELLOW')
-  .setTitle('Result:')
-  .setDescription('⚠️  Address Invalid!');
+  .setTitle('⚠️')
+  .setDescription(' Address Invalid!');
 
 // Register an event so that when the bot is ready, it will log a messsage to the terminal
 client.on('ready', () => {
