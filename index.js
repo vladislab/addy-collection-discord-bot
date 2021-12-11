@@ -1,124 +1,111 @@
 // Import discord.js and create the client
 require('dotenv').config();
 const { Client, Intents, Collection, MessageEmbed } = require('discord.js');
-const fs = require('fs');
-const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v9');
+// const fs = require('fs');
+// const { REST } = require('@discordjs/rest');
+// const { Routes } = require('discord-api-types/v9');
 const {
   checkWhitelisted,
   verifyAddressWL,
   checkValidAddr,
+  store,
 } = require('./api/aws');
 
 const discord_token = process.env.DISCORD_TOKEN;
-const GUILD_ID = process.env.GUILD_ID;
+// const GUILD_ID = process.env.GUILD_ID;
 
 const client = new Client({
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
 
-function store(whitelistObj, callback) {
-  const params = {
-    TableName,
-    Item: {
-      ...whitelistObj,
-    },
-  };
-  docClient.put(params, (error) => {
-    if (!error) {
-      // Return a message to the user stating that the app was saved
-      return callback();
-    } else {
-      console.error('Unable to save whitelist, err' + error);
-    }
-  });
-}
-
 // Loading commands from the commands folder
-const commandFiles = fs
-  .readdirSync('./commands')
-  .filter((file) => file.endsWith('.js'));
-const commands = [];
+// const commandFiles = fs
+//   .readdirSync('./commands')
+//   .filter((file) => file.endsWith('.js'));
+// const commands = [];
 
-// Creating a collection for commands in client
-client.commands = new Collection();
+// // Creating a collection for commands in client
+// client.commands = new Collection();
 
-for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  commands.push(command.data.toJSON());
-  client.commands.set(command.data.name, command);
-}
+// for (const file of commandFiles) {
+//   const command = require(`./commands/${file}`);
+//   commands.push(command.data.toJSON());
+//   client.commands.set(command.data.name, command);
+// }
+
+const embedWlTrue = new MessageEmbed()
+  .setColor('GREEN')
+  .setTitle('Result:')
+  .setDescription('✅  Address Whitelisted!');
+const embedWlFalse = new MessageEmbed()
+  .setColor('RED')
+  .setTitle('Result:')
+  .setDescription('❌  Address NOT whitelisted!');
+
+const embedWlInvalid = new MessageEmbed()
+  .setColor('YELLOW')
+  .setTitle('Result:')
+  .setDescription('⚠️  Address Invalid!');
 
 // Register an event so that when the bot is ready, it will log a messsage to the terminal
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
+  console.log(`Required Permissions: Send messages, View channel, Send embeds`);
 });
 
 // When the client is ready, this only runs once
-client.once('ready', () => {
-  console.log('Ready!');
-  // Registering the commands in the client
-  const CLIENT_ID = client.user.id;
-  const rest = new REST({
-    version: '9',
-  }).setToken(discord_token);
-  async () => {
-    try {
-      await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
-        body: commands,
-      });
-      console.log(
-        'Successfully registered application commands for development guild'
-      );
-    } catch (error) {
-      if (error) console.error(error);
-    }
-  };
-});
+// client.once('ready', () => {
+//   console.log('Ready!');
+//   // Registering the commands in the client
+//   const CLIENT_ID = client.user.id;
+//   const rest = new REST({
+//     version: '9',
+//   }).setToken(discord_token);
+//   async () => {
+//     try {
+//       await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
+//         body: commands,
+//       });
+//       console.log(
+//         'Successfully registered application commands for development guild'
+//       );
+//     } catch (error) {
+//       if (error) console.error(error);
+//     }
+//   };
+// });
 
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isCommand()) return;
-  const command = client.commands.get(interaction.commandName);
-  if (!command) return;
-  const embedWlTrue = new MessageEmbed()
-    .setColor('GREEN')
-    .setTitle('Result:')
-    .setDescription('✅ Address Whitelisted!');
-  const embedWlFalse = new MessageEmbed()
-    .setColor('RED')
-    .setTitle('Result:')
-    .setDescription('❌ Address NOT whitelisted!');
+//Broken
+// client.on('interactionCreate', async (interaction) => {
+//   if (!interaction.isCommand()) return;
+//   const command = client.commands.get(interaction.commandName);
+//   if (!command) return;
 
-  const embedWlInvalid = new MessageEmbed()
-    .setColor('YELLOW')
-    .setTitle('Result:')
-    .setDescription('⚠️ Not a valid Ethereum address!');
-
-  try {
-    function callback(interaction, addr) {
-      verifyAddressWL(addr, (isWL) => {
-        if (typeof isWL === 'undefined') {
-          interaction.reply({ embeds: [embedWlInvalid] });
-          return;
-        }
-        if (isWL) interaction.reply({ embeds: [embedWlTrue] });
-        else interaction.reply({ embeds: [embedWlFalse] });
-      });
-    }
-    await command.execute(interaction, callback);
-  } catch (error) {
-    if (error) console.error(error);
-    await interaction.reply({
-      content: 'There was an error while executing this command!',
-      ephemeral: true,
-    });
-  }
-});
+//   try {
+//     function callback(interaction, addr) {
+//       verifyAddressWL(addr, (isWL) => {
+//         if (typeof isWL === 'undefined') {
+//           interaction.reply({ embeds: [embedWlInvalid] });
+//           return;
+//         }
+//         if (isWL) interaction.reply({ embeds: [embedWlTrue] });
+//         else interaction.reply({ embeds: [embedWlFalse] });
+//       });
+//     }
+//     await command.execute(interaction, callback);
+//   } catch (error) {
+//     if (error) console.error(error);
+//     await interaction.reply({
+//       content: 'There was an error while executing this command!',
+//       ephemeral: true,
+//     });
+//   }
+// });
 
 // Register an event to handle incoming messages
 client.on('messageCreate', async (msg) => {
   // This block will prevent the bot from responding to itself and other bots
-  if (msg.author.bot || process.env.VERIFY_MODE === 'ON') {
+  if (msg.author.bot) {
     return;
   }
 
@@ -127,7 +114,7 @@ client.on('messageCreate', async (msg) => {
     return;
   }
 
-  if (msg.content.startsWith('!check')) {
+  if (msg.content.startsWith('!check') && process.env.VERIFY_MODE === 'OFF') {
     const {
       author: { bot, system, username, discriminator },
     } = msg;
@@ -154,11 +141,16 @@ client.on('messageCreate', async (msg) => {
         nonce,
       };
       console.log(log);
-      store(log, () => msg.reply(`<a:noted:913180241155981362>`));
+      if (process.env.VERIFY_MODE === 'ON') {
+        verifyAddressWL(content, (isWL) => {
+          if (isWL) msg.reply({ embeds: [embedWlTrue] });
+          else msg.reply({ embeds: [embedWlFalse] });
+        });
+      } else {
+        store(log, () => msg.reply(`<a:noted:913180241155981362>`));
+      }
     } else {
-      msg.reply(
-        'That’s not a valid address, you rat <:shotty:893972495961559061>'
-      );
+      msg.reply({ embeds: [embedWlInvalid] });
     }
   }
 });

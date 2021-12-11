@@ -19,6 +19,22 @@ function checkValidAddr(addr) {
 }
 
 module.exports = {
+  store(whitelistObj, callback) {
+    const params = {
+      TableName,
+      Item: {
+        ...whitelistObj,
+      },
+    };
+    docClient.put(params, (error) => {
+      if (!error) {
+        // Return a message to the user stating that the app was saved
+        return callback();
+      } else {
+        console.error('Unable to save whitelist, err' + error);
+      }
+    });
+  },
   checkWhitelisted(sender, callback) {
     let wl = false;
     let addr = 'No address registered! <a:no:894309088987586641>';
