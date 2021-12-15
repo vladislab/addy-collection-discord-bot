@@ -33,27 +33,24 @@ const client = new Client({
 //   client.commands.set(command.data.name, command);
 // }
 
-const embedWlTrue = new MessageEmbed()
-  .setColor('GREEN')
-  .setTitle('✅')
-  .setDescription('  Address Whitelisted!');
-const embedWlFalse = new MessageEmbed()
-  .setColor('RED')
-  .setTitle('❌')
-  .setDescription(
-    ' Address NOT whitelisted! \nPlease try again using MM address (case sensitive).'
-  );
+// const embedWlTrue = (userId) =>
+//   new MessageEmbed()
+//     .setColor('GREEN')
+//     .setTitle(`✅ ${userId}`)
+//     .setDescription(`${userId} Address Whitelisted!`);
+// const embedWlFalse = (userId) =>
+//   new MessageEmbed()
+//     .setColor('RED')
+//     .setTitle(`❌ ${userId}`)
+//     .setDescription(
+//       ' Address NOT whitelisted! \nPlease try again using MM address (case sensitive).'
+//     );
 
-const embedWlInvalid = new MessageEmbed()
-  .setColor('YELLOW')
-  .setTitle('⚠️')
-  .setDescription(' Address Invalid!');
-
-// Register an event so that when the bot is ready, it will log a messsage to the terminal
-client.on('ready', () => {
-  console.log(`Logged in as ${client.user.tag}!`);
-  console.log(`Required Permissions: Send messages, View channel, Send embeds`);
-});
+// const embedWlInvalid = (userId) =>
+//   new MessageEmbed()
+//     .setColor('YELLOW')
+//     .setTitle(`⚠️ ${userId}`)
+//     .setDescription(`${userId}  Address Invalid!`);
 
 // When the client is ready, this only runs once
 // client.once('ready', () => {
@@ -104,6 +101,19 @@ client.on('ready', () => {
 //   }
 // });
 
+const messageInvalid = (userId) => `⚠️ ${userId}  Address Invalid!`;
+const messageWlTrue = (userId) => `✅ ${userId} Address Whitelisted!`;
+const messageWlFalse = (userId) =>
+  `❌ ${userId} Address **NOT** whitelisted! Please try again using MM address (might be due to case sensitive).`;
+
+// Register an event so that when the bot is ready, it will log a messsage to the terminal
+client.on('ready', () => {
+  console.log(`Logged in as ${client.user.tag}!`);
+  console.log(
+    `Required Permissions: Send messages, View channel, Send embeds, Manage messages, View message history`
+  );
+});
+
 // Register an event to handle incoming messages
 client.on('messageCreate', async (msg) => {
   // This block will prevent the bot from responding to itself and other bots
@@ -134,6 +144,8 @@ client.on('messageCreate', async (msg) => {
       author: { bot, system, username, discriminator },
       nonce,
     } = msg;
+    const userId = msg.author.toString();
+
     if (!bot && !system && checkValidAddr(content)) {
       const log = {
         address: content,
@@ -145,14 +157,16 @@ client.on('messageCreate', async (msg) => {
       console.log(log);
       if (process.env.VERIFY_MODE === 'ON') {
         verifyAddressWL(content, (isWL) => {
-          if (isWL) msg.reply({ embeds: [embedWlTrue] });
-          else msg.reply({ embeds: [embedWlFalse] });
+          if (isWL) msg.channel.send(messageWlTrue(userId));
+          else msg.channel.send(messageWlFalse(userId));
         });
+        msg.delete();
       } else {
         store(log, () => msg.reply(`<a:noted:913180241155981362>`));
       }
     } else {
-      msg.reply({ embeds: [embedWlInvalid] });
+      msg.channel.send(messageInvalid(userId));
+      msg.delete();
     }
   }
 });
